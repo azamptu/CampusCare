@@ -1,0 +1,569 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CampusCare | College Complaint Portal</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header class="topbar">
+
+        <a href="#" class="brand">
+            <span class="brand-icon">C</span>
+            <span>Campus<span class="brand-light">Care</span></span>
+        </a>
+
+        <nav>
+            <button class="nav-btn active" data-page="studentPage">
+                Student Portal
+            </button>
+
+            <button class="nav-btn" data-page="adminPage">
+                Admin Panel
+            </button>
+        </nav>
+
+        <span class="portal-label">COLLEGE SUPPORT SYSTEM</span>
+
+    </header>
+
+
+    <main class="container">
+
+        <!-- STUDENT PORTAL -->
+        <section id="studentPage" class="page active-page">
+
+            <!-- LOGIN / REGISTER -->
+            <div id="authSection" class="panel">
+
+                <div class="panel-heading">
+                    <h3>Student Account</h3>
+                    <p>Login or create an account to access CampusCare.</p>
+                </div>
+
+                <div class="form-grid">
+
+                    <div class="field full-width">
+                        <label for="authEmail">Email Address *</label>
+
+                        <input
+                            type="email"
+                            id="authEmail"
+                            placeholder="Enter your email"
+                        >
+                    </div>
+
+                    <div class="field full-width">
+                        <label for="authPassword">Password *</label>
+
+                        <input
+                            type="password"
+                            id="authPassword"
+                            placeholder="Enter your password"
+                        >
+                    </div>
+
+                </div>
+
+                <button type="button" id="registerBtn" class="primary-btn">
+                    Create Account
+                </button>
+
+                <button type="button" id="loginBtn" class="secondary-btn">
+                    Login
+                </button>
+
+                <p id="authMessage" class="message" aria-live="polite"></p>
+
+            </div>
+
+
+            <!-- STUDENT DASHBOARD -->
+            <div id="studentDashboard" hidden>
+
+                <div class="hero">
+
+                    <div>
+
+                        <span class="eyebrow">
+                            CAMPUS SUPPORT • STUDENT SERVICES
+                        </span>
+
+                        <h1>
+                            Your Campus.<br>
+                            <span>Your Voice Matters.</span>
+                        </h1>
+
+                        <p>
+                            Report campus problems and track your complaints.
+                            We are here to make your college experience better.
+                        </p>
+
+                    </div>
+
+                    <div class="hero-symbol">CC</div>
+
+                </div>
+
+
+                <div class="section-heading">
+
+                    <div>
+                        <h2>Submit a Complaint</h2>
+                        <p>Fill in the details below to report an issue.</p>
+                    </div>
+
+                    <span class="secure-label">● Student Portal</span>
+
+                </div>
+
+
+                <div class="content-grid">
+
+                    <!-- COMPLAINT FORM -->
+                    <form id="complaintForm" class="panel">
+
+                        <div class="panel-heading">
+                            <h3>Complaint Details</h3>
+                            <p>Fields marked with * are required.</p>
+                        </div>
+
+
+                        <div class="form-grid">
+
+                            <div class="field">
+                                <label for="studentName">Student Name *</label>
+
+                                <input
+                                    type="text"
+                                    id="studentName"
+                                    placeholder="Enter your full name"
+                                    required
+                                >
+                            </div>
+
+
+                            <div class="field">
+                                <label for="studentId">
+                                    Student ID / Roll No. *
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="studentId"
+                                    placeholder="Enter your roll number"
+                                    required
+                                >
+                            </div>
+
+
+                            <div class="field full-width">
+                                <label for="studentEmail">
+                                    Email Address *
+                                </label>
+
+                                <input
+                                    type="email"
+                                    id="studentEmail"
+                                    placeholder="Enter your email"
+                                    required
+                                    readonly
+                                >
+                            </div>
+
+
+                            <div class="field">
+                                <label for="category">
+                                    Complaint Category *
+                                </label>
+
+                                <select id="category" required>
+
+                                    <option value="">Select category</option>
+                                    <option>Water Supply</option>
+                                    <option>Electricity</option>
+                                    <option>Hostel Cleanliness</option>
+                                    <option>Washroom</option>
+                                    <option>Mess / Food</option>
+                                    <option>Classroom Facilities</option>
+                                    <option>Internet / Wi-Fi</option>
+                                    <option>Other</option>
+
+                                </select>
+                            </div>
+
+
+                            <div class="field full-width">
+                                <label for="location">
+                                    Problem Location *
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="location"
+                                    placeholder="e.g. Hostel Block B, Room 204"
+                                    required
+                                >
+                            </div>
+
+
+                            <div class="field full-width">
+                                <label for="complaintTitle">
+                                    Complaint Title *
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="complaintTitle"
+                                    placeholder="Briefly describe the issue"
+                                    required
+                                >
+                            </div>
+
+
+                            <div class="field full-width">
+
+                                <label for="description">
+                                    Complaint Description *
+                                </label>
+
+                                <textarea
+                                    id="description"
+                                    rows="5"
+                                    placeholder="Explain the problem in detail..."
+                                    required
+                                ></textarea>
+
+                            </div>
+
+
+                            <!-- IMAGE UPLOAD -->
+                            <div class="field full-width">
+
+                                <label for="complaintImage">
+                                    Attach Complaint Image (Optional)
+                                </label>
+
+                                <input
+                                    type="file"
+                                    id="complaintImage"
+                                    accept="image/jpeg,image/png,image/webp"
+                                >
+
+                                <small>
+                                    Upload JPG, PNG or WEBP image.
+                                    Maximum recommended size: 5 MB.
+                                </small>
+
+                                <img
+                                    id="imagePreview"
+                                    src=""
+                                    alt="Complaint image preview"
+                                    hidden
+                                    style="max-width: 200px; max-height: 200px; margin-top: 12px; border-radius: 10px; object-fit: cover;"
+                                >
+
+                            </div>
+
+                        </div>
+
+
+                        <button type="submit" class="primary-btn">
+                            Submit Complaint <span>→</span>
+                        </button>
+
+                        <p
+                            id="formMessage"
+                            class="message"
+                            aria-live="polite"
+                        ></p>
+
+                    </form>
+
+
+                    <!-- SIDE COLUMN -->
+                    <aside class="side-column">
+
+                        <div class="info-card">
+
+                            <span class="info-icon">✦</span>
+
+                            <h3>How it works</h3>
+
+                            <ol>
+                                <li>Login to your student account.</li>
+                                <li>Submit your complaint.</li>
+                                <li>Get a unique Complaint ID.</li>
+                                <li>Track your complaint status.</li>
+                            </ol>
+
+                        </div>
+
+
+                        <!-- TRACK COMPLAINT -->
+                        <div class="info-card track-card">
+
+                            <span class="info-icon">⌕</span>
+
+                            <h3>Track Your Complaint</h3>
+
+                            <p>
+                                Already submitted a complaint?
+                                Enter your Complaint ID below.
+                            </p>
+
+                            <form id="trackForm">
+
+                                <input
+                                    type="text"
+                                    id="trackId"
+                                    placeholder="e.g. CC-2026-001"
+                                    required
+                                >
+
+                                <button
+                                    type="submit"
+                                    class="secondary-btn"
+                                >
+                                    Track Status
+                                </button>
+
+                            </form>
+
+                            <div
+                                id="trackResult"
+                                aria-live="polite"
+                            ></div>
+
+                        </div>
+
+                    </aside>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    id="logoutBtn"
+                    class="secondary-btn"
+                >
+                    Logout
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- ADMIN PANEL -->
+        <section id="adminPage" class="page">
+
+            <!-- ADMIN LOGIN -->
+            <div id="adminAuthSection" class="panel">
+
+                <div class="panel-heading">
+                    <h3>Admin Login</h3>
+                    <p>Authorized administrators only.</p>
+                </div>
+
+                <div class="form-grid">
+
+                    <div class="field full-width">
+                        <label for="adminEmail">Admin Email *</label>
+
+                        <input
+                            type="email"
+                            id="adminEmail"
+                            placeholder="Enter admin email"
+                        >
+                    </div>
+
+
+                    <div class="field full-width">
+                        <label for="adminPassword">Password *</label>
+
+                        <input
+                            type="password"
+                            id="adminPassword"
+                            placeholder="Enter admin password"
+                        >
+                    </div>
+
+                </div>
+
+                <button
+                    type="button"
+                    id="adminLoginBtn"
+                    class="primary-btn"
+                >
+                    Admin Login
+                </button>
+
+                <p
+                    id="adminAuthMessage"
+                    class="message"
+                    aria-live="polite"
+                ></p>
+
+            </div>
+
+
+            <!-- ADMIN DASHBOARD -->
+            <div id="adminDashboard" hidden>
+
+                <div class="admin-heading">
+
+                    <div>
+
+                        <span class="eyebrow">
+                            MANAGEMENT DASHBOARD
+                        </span>
+
+                        <h1>Admin Dashboard</h1>
+
+                        <p>
+                            Review and manage student complaints.
+                        </p>
+
+                    </div>
+
+                    <span class="admin-label">
+                        ADMIN VIEW
+                    </span>
+
+                </div>
+
+
+                <!-- STATISTICS -->
+                <div class="stats-grid">
+
+                    <div class="stat-card">
+                        <span>Total Complaints</span>
+                        <strong id="totalCount">0</strong>
+                    </div>
+
+                    <div class="stat-card">
+                        <span>Pending</span>
+                        <strong id="pendingCount">0</strong>
+                    </div>
+
+                    <div class="stat-card">
+                        <span>In Progress</span>
+                        <strong id="progressCount">0</strong>
+                    </div>
+
+                    <div class="stat-card">
+                        <span>Resolved</span>
+                        <strong id="resolvedCount">0</strong>
+                    </div>
+
+                </div>
+
+
+                <!-- COMPLAINT MANAGEMENT -->
+                <div class="panel complaints-panel">
+
+                    <div class="complaints-heading">
+
+                        <div>
+                            <h3>All Complaints</h3>
+
+                            <p>
+                                View, search and manage student complaints.
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    <!-- SEARCH AND FILTERS -->
+                    <div class="filter-controls">
+
+                        <input
+                            type="search"
+                            id="complaintSearch"
+                            placeholder="Search by name, ID, title..."
+                        >
+
+                        <select id="categoryFilter">
+
+                            <option value="All">All Categories</option>
+                            <option value="Water Supply">Water Supply</option>
+                            <option value="Electricity">Electricity</option>
+                            <option value="Hostel Cleanliness">Hostel Cleanliness</option>
+                            <option value="Washroom">Washroom</option>
+                            <option value="Mess / Food">Mess / Food</option>
+                            <option value="Classroom Facilities">Classroom Facilities</option>
+                            <option value="Internet / Wi-Fi">Internet / Wi-Fi</option>
+                            <option value="Other">Other</option>
+
+                        </select>
+
+
+                        <select id="statusFilter">
+
+                            <option value="All">All Status</option>
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- COMPLAINT LIST -->
+                    <div id="complaintsList">
+
+                        <div class="empty-state">
+                            <span>▤</span>
+                            <h3>No complaints yet</h3>
+                            <p>Student complaints will appear here.</p>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    id="adminLogoutBtn"
+                    class="secondary-btn"
+                >
+                    Admin Logout
+                </button>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+    <footer>
+
+        <strong>CampusCare</strong>
+
+        <span>
+            Making campus life better, one complaint at a time.
+        </span>
+
+    </footer>
+
+
+    <!-- JAVASCRIPT -->
+    <script type="module" src="script.js"></script>
+
+</body>
+
+</html>
