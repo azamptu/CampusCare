@@ -23,6 +23,7 @@ import {
 
 console.log("CampusCare Firebase Connected!");
 
+
 // ==========================================
 // 1. GLOBAL VARIABLES
 // ==========================================
@@ -32,6 +33,8 @@ let currentRole = null;
 
 let allComplaints = [];
 let unsubscribeComplaints = null;
+
+let adminNotificationsInitialized = false;
 
 // Cloudinary configuration
 const CLOUDINARY_CLOUD_NAME = "ykncmcs8";
@@ -45,9 +48,166 @@ const ALLOWED_IMAGE_TYPES = [
     "image/webp"
 ];
 
+// EmailJS configuration
+const EMAILJS_PUBLIC_KEY = "PGPabnpzoqwg96_EA";
+const EMAILJS_SERVICE_ID = "service_yzfyprp";
+const EMAILJS_TEMPLATE_ID = "template_1gfevik";
+
+let emailJsLoadPromise = null;
+
 
 // ==========================================
-// 2. AUTHENTICATION ELEMENTS
+// 2. EMAILJS LOADER
+// ==========================================
+
+async function loadEmailJS() {
+
+    if (window.emailjs) {
+
+        window.emailjs.init({
+            publicKey: EMAILJS_PUBLIC_KEY
+        });
+
+        return;
+    }
+
+    if (!emailJsLoadPromise) {
+
+        emailJsLoadPromise = new Promise((resolve, reject) => {
+
+            const script = document.createElement("script");
+
+            script.src =
+                "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
+
+            script.onload = () => {
+
+                try {
+
+                    window.emailjs.init({
+                        publicKey: EMAILJS_PUBLIC_KEY
+                    });
+
+                    resolve();
+
+                } catch (error) {
+
+                    emailJsLoadPromise = null;
+                    reject(error);
+
+                }
+
+            };
+
+            script.onerror = () => {
+
+                emailJsLoadPromise = null;
+
+                reject(
+                    new Error("EmailJS could not be loaded.")
+                );
+
+            };
+
+            document.head.appendChild(script);
+
+        });
+
+    }
+
+    return emailJsLoadPromise;
+}
+
+
+// ==========================================
+// 3. SEND ADMIN EMAIL NOTIFICATION
+// ==========================================
+
+async function sendAdminEmailNotification(complaint) {
+
+    await loadEmailJS();
+
+    const templateParams = {
+
+        to_email: "ptuazam@gmail.com",
+
+        name: complaint.studentName,
+
+        email: complaint.email,
+
+        subject: "New CampusCare Complaint: " + complaint.title,
+
+        message:
+            "A new complaint has been submitted.\n\n" +
+            "Complaint ID: " + complaint.id + "\n" +
+            "Student Name: " + complaint.studentName + "\n" +
+            "Roll Number: " + complaint.studentId + "\n" +
+            "Student Email: " + complaint.email + "\n" +
+            "Category: " + complaint.category + "\n" +
+            "Location: " + complaint.location + "\n" +
+            "Title: " + complaint.title + "\n" +
+            "Description: " + complaint.description + "\n" +
+            "Date: " + complaint.date
+
+    };
+
+    return window.emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        templateParams
+    );
+}
+
+
+// ==========================================
+// 4. SEND STUDENT REPLY EMAIL NOTIFICATION
+// ==========================================
+
+async function sendStudentReplyEmail(complaint, adminReply) {
+
+    if (!complaint.email) {
+
+        throw new Error("Student email address is missing.");
+
+    }
+
+    await loadEmailJS();
+
+    const templateParams = {
+
+        to_email: complaint.email,
+
+        name: complaint.studentName,
+
+        email: complaint.email,
+
+        subject:
+            "Admin replied to your CampusCare Complaint - " +
+            complaint.id,
+
+        message:
+            "Hello " + complaint.studentName + ",\n\n" +
+            "The CampusCare Admin has replied to your complaint.\n\n" +
+            "Complaint ID: " + complaint.id + "\n" +
+            "Complaint Title: " + complaint.title + "\n" +
+            "Category: " + complaint.category + "\n\n" +
+            "Admin Response:\n" +
+            adminReply + "\n\n" +
+            "Please login to CampusCare to track your complaint.\n\n" +
+            "Regards,\nCampusCare Team"
+
+    };
+
+    return window.emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        templateParams
+    );
+}
+
+
+// ==========================================
+// 5. AUTHENTICATION ELEMENTS
 // ==========================================
 
 // Student elements
@@ -81,45 +241,69 @@ const imagePreview = document.getElementById("imagePreview");
 
 
 // ==========================================
-// 3. MESSAGE FUNCTIONS
+// 6. MESSAGE FUNCTIONS
 // ==========================================
 
 function showAuthMessage(message, type) {
+
     authMessage.textContent = message;
     authMessage.className = "message " + type;
+
 }
 
 function showAdminAuthMessage(message, type) {
+
     adminAuthMessage.textContent = message;
     adminAuthMessage.className = "message " + type;
+
 }
 
 function showMessage(message, type) {
+
     const formMessage = document.getElementById("formMessage");
 
     formMessage.textContent = message;
     formMessage.className = "message " + type;
+
 }
 
 function getAuthError(error) {
 
     const messages = {
-        "auth/email-already-in-use": "This email is already registered.",
-        "auth/invalid-email": "Please enter a valid email address.",
-        "auth/weak-password": "Password must contain at least 6 characters.",
-        "auth/invalid-credential": "Incorrect email or password.",
-        "auth/user-not-found": "Account not found.",
-        "auth/wrong-password": "Incorrect password.",
-        "auth/too-many-requests": "Too many attempts. Please try again later.",
-        "auth/network-request-failed": "Network error. Check your internet connection."
+
+        "auth/email-already-in-use":
+            "This email is already registered.",
+
+        "auth/invalid-email":
+            "Please enter a valid email address.",
+
+        "auth/weak-password":
+            "Password must contain at least 6 characters.",
+
+        "auth/invalid-credential":
+            "Incorrect email or password.",
+
+        "auth/user-not-found":
+            "Account not found.",
+
+        "auth/wrong-password":
+            "Incorrect password.",
+
+        "auth/too-many-requests":
+            "Too many attempts. Please try again later.",
+
+        "auth/network-request-failed":
+            "Network error. Check your internet connection."
+
     };
 
     return messages[error.code] || error.message;
+
 }
 
 
 // ==========================================
-// 4. IMAGE VALIDATION
+// 7. IMAGE VALIDATION
 // ==========================================
 
 function validateImage(file) {
@@ -127,19 +311,24 @@ function validateImage(file) {
     if (!file) return "Please select an image.";
 
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+
         return "Only JPG, PNG and WEBP images are allowed.";
+
     }
 
     if (file.size > MAX_IMAGE_SIZE) {
+
         return "Image size must be less than 5 MB.";
+
     }
 
     return null;
+
 }
 
 
 // ==========================================
-// 5. IMAGE PREVIEW
+// 8. IMAGE PREVIEW
 // ==========================================
 
 let previewObjectURL = null;
@@ -151,8 +340,10 @@ if (complaintImage && imagePreview) {
         const file = complaintImage.files[0];
 
         if (previewObjectURL) {
+
             URL.revokeObjectURL(previewObjectURL);
             previewObjectURL = null;
+
         }
 
         imagePreview.hidden = true;
@@ -163,9 +354,13 @@ if (complaintImage && imagePreview) {
         const validationError = validateImage(file);
 
         if (validationError) {
+
             showMessage(validationError, "error");
+
             complaintImage.value = "";
+
             return;
+
         }
 
         previewObjectURL = URL.createObjectURL(file);
@@ -181,7 +376,7 @@ if (complaintImage && imagePreview) {
 
 
 // ==========================================
-// 6. UPLOAD IMAGE TO CLOUDINARY
+// 9. UPLOAD IMAGE TO CLOUDINARY
 // ==========================================
 
 async function uploadImageToCloudinary(file) {
@@ -189,7 +384,9 @@ async function uploadImageToCloudinary(file) {
     const validationError = validateImage(file);
 
     if (validationError) {
+
         throw new Error(validationError);
+
     }
 
     const uploadURL =
@@ -201,33 +398,42 @@ async function uploadImageToCloudinary(file) {
     formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
 
     const response = await fetch(uploadURL, {
+
         method: "POST",
         body: formData
+
     });
 
     const result = await response.json();
 
     if (!response.ok) {
+
         console.error("Cloudinary upload error:", result);
 
         throw new Error(
             result.error?.message || "Image upload failed."
         );
+
     }
 
     if (!result.secure_url) {
+
         throw new Error("Cloudinary did not return an image URL.");
+
     }
 
     return {
+
         imageUrl: result.secure_url,
         imagePublicId: result.public_id || ""
+
     };
+
 }
 
 
 // ==========================================
-// 7. STUDENT REGISTRATION
+// 10. STUDENT REGISTRATION
 // ==========================================
 
 registerBtn.addEventListener("click", async function() {
@@ -236,19 +442,35 @@ registerBtn.addEventListener("click", async function() {
     const password = authPassword.value;
 
     if (!email || !password) {
-        showAuthMessage("Please enter email and password.", "error");
+
+        showAuthMessage(
+            "Please enter email and password.",
+            "error"
+        );
+
         return;
+
     }
 
     try {
 
         registerBtn.disabled = true;
 
-        showAuthMessage("Creating your account...", "success");
+        showAuthMessage(
+            "Creating your account...",
+            "success"
+        );
 
-        await createUserWithEmailAndPassword(auth, email, password);
+        await createUserWithEmailAndPassword(
+            auth,
+            email,
+            password
+        );
 
-        showAuthMessage("Account created successfully!", "success");
+        showAuthMessage(
+            "Account created successfully!",
+            "success"
+        );
 
     } catch (error) {
 
@@ -264,7 +486,7 @@ registerBtn.addEventListener("click", async function() {
 
 
 // ==========================================
-// 8. STUDENT LOGIN
+// 11. STUDENT LOGIN
 // ==========================================
 
 loginBtn.addEventListener("click", async function() {
@@ -273,8 +495,14 @@ loginBtn.addEventListener("click", async function() {
     const password = authPassword.value;
 
     if (!email || !password) {
-        showAuthMessage("Please enter email and password.", "error");
+
+        showAuthMessage(
+            "Please enter email and password.",
+            "error"
+        );
+
         return;
+
     }
 
     try {
@@ -283,9 +511,16 @@ loginBtn.addEventListener("click", async function() {
 
         showAuthMessage("Logging in...", "success");
 
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(
+            auth,
+            email,
+            password
+        );
 
-        showAuthMessage("Login successful!", "success");
+        showAuthMessage(
+            "Login successful!",
+            "success"
+        );
 
     } catch (error) {
 
@@ -301,7 +536,7 @@ loginBtn.addEventListener("click", async function() {
 
 
 // ==========================================
-// 9. STUDENT LOGOUT
+// 12. STUDENT LOGOUT
 // ==========================================
 
 logoutBtn.addEventListener("click", async function() {
@@ -310,7 +545,10 @@ logoutBtn.addEventListener("click", async function() {
 
         await signOut(auth);
 
-        showAuthMessage("You have logged out successfully.", "success");
+        showAuthMessage(
+            "You have logged out successfully.",
+            "success"
+        );
 
     } catch (error) {
 
@@ -322,7 +560,85 @@ logoutBtn.addEventListener("click", async function() {
 
 
 // ==========================================
-// 10. ADMIN LOGIN
+// 13. ADMIN BROWSER NOTIFICATIONS
+// ==========================================
+
+function requestAdminNotificationPermission() {
+
+    if (!("Notification" in window)) {
+
+        console.log(
+            "Browser notifications are not supported."
+        );
+
+        return;
+
+    }
+
+    if (Notification.permission === "default") {
+
+        Notification.requestPermission().then(permission => {
+
+            console.log(
+                "Notification permission:",
+                permission
+            );
+
+        }).catch(error => {
+
+            console.error(
+                "Notification permission error:",
+                error
+            );
+
+        });
+
+    }
+
+}
+
+
+function showAdminBrowserNotification(complaint) {
+
+    if (!("Notification" in window)) return;
+
+    if (Notification.permission !== "granted") return;
+
+    try {
+
+        const notification = new Notification(
+            "New CampusCare Complaint",
+            {
+
+                body:
+                    complaint.studentName +
+                    " submitted: " +
+                    complaint.title
+
+            }
+        );
+
+        notification.onclick = function() {
+
+            window.focus();
+            notification.close();
+
+        };
+
+    } catch (error) {
+
+        console.error(
+            "Browser notification error:",
+            error
+        );
+
+    }
+
+}
+
+
+// ==========================================
+// 14. ADMIN LOGIN
 // ==========================================
 
 adminLoginBtn.addEventListener("click", async function() {
@@ -331,15 +647,24 @@ adminLoginBtn.addEventListener("click", async function() {
     const password = adminPassword.value;
 
     if (!email || !password) {
-        showAdminAuthMessage("Please enter email and password.", "error");
+
+        showAdminAuthMessage(
+            "Please enter email and password.",
+            "error"
+        );
+
         return;
+
     }
 
     try {
 
         adminLoginBtn.disabled = true;
 
-        showAdminAuthMessage("Verifying admin account...", "success");
+        showAdminAuthMessage(
+            "Verifying admin account...",
+            "success"
+        );
 
         const userCredential = await signInWithEmailAndPassword(
             auth,
@@ -366,13 +691,22 @@ adminLoginBtn.addEventListener("click", async function() {
             );
 
             return;
+
         }
 
-        showAdminAuthMessage("Admin login successful!", "success");
+        showAdminAuthMessage(
+            "Admin login successful!",
+            "success"
+        );
+
+        requestAdminNotificationPermission();
 
     } catch (error) {
 
-        showAdminAuthMessage(getAuthError(error), "error");
+        showAdminAuthMessage(
+            getAuthError(error),
+            "error"
+        );
 
     } finally {
 
@@ -384,7 +718,7 @@ adminLoginBtn.addEventListener("click", async function() {
 
 
 // ==========================================
-// 11. ADMIN LOGOUT
+// 15. ADMIN LOGOUT
 // ==========================================
 
 adminLogoutBtn.addEventListener("click", async function() {
@@ -393,11 +727,17 @@ adminLogoutBtn.addEventListener("click", async function() {
 
         await signOut(auth);
 
-        showAdminAuthMessage("Admin logged out successfully.", "success");
+        showAdminAuthMessage(
+            "Admin logged out successfully.",
+            "success"
+        );
 
     } catch (error) {
 
-        showAdminAuthMessage(getAuthError(error), "error");
+        showAdminAuthMessage(
+            getAuthError(error),
+            "error"
+        );
 
     }
 
@@ -405,7 +745,7 @@ adminLogoutBtn.addEventListener("click", async function() {
 
 
 // ==========================================
-// 12. AUTHENTICATION STATE
+// 16. AUTHENTICATION STATE
 // ==========================================
 
 onAuthStateChanged(auth, async function(user) {
@@ -414,11 +754,15 @@ onAuthStateChanged(auth, async function(user) {
     currentRole = null;
 
     if (unsubscribeComplaints) {
+
         unsubscribeComplaints();
         unsubscribeComplaints = null;
+
     }
 
     allComplaints = [];
+
+    adminNotificationsInitialized = false;
 
     authSection.hidden = true;
     studentDashboard.hidden = true;
@@ -438,11 +782,13 @@ onAuthStateChanged(auth, async function(user) {
         adminPassword.value = "";
 
         return;
+
     }
 
     try {
 
         const adminRef = doc(db, "admins", user.uid);
+
         const adminSnapshot = await getDoc(adminRef);
 
         if (
@@ -469,7 +815,10 @@ onAuthStateChanged(auth, async function(user) {
 
     } catch (error) {
 
-        console.error("Role verification failed:", error);
+        console.error(
+            "Role verification failed:",
+            error
+        );
 
         currentRole = null;
 
@@ -487,7 +836,7 @@ onAuthStateChanged(auth, async function(user) {
 
 
 // ==========================================
-// 13. SAFE HTML
+// 17. SAFE HTML
 // ==========================================
 
 function escapeHTML(value) {
@@ -506,7 +855,7 @@ function escapeHTML(value) {
 
 
 // ==========================================
-// 14. NAVIGATION
+// 18. NAVIGATION
 // ==========================================
 
 const navButtons = document.querySelectorAll(".nav-btn");
@@ -518,7 +867,10 @@ navButtons.forEach(button => {
 
         const pageId = button.dataset.page;
 
-        if (pageId === "adminPage" && currentRole !== "admin") {
+        if (
+            pageId === "adminPage" &&
+            currentRole !== "admin"
+        ) {
 
             adminAuthSection.hidden = false;
             adminDashboard.hidden = true;
@@ -526,19 +878,30 @@ navButtons.forEach(button => {
         }
 
         pages.forEach(page => {
+
             page.classList.remove("active-page");
+
         });
 
         navButtons.forEach(nav => {
+
             nav.classList.remove("active");
+
         });
 
         document.getElementById(pageId).classList.add("active-page");
 
         button.classList.add("active");
 
-        if (pageId === "adminPage" && currentRole === "admin") {
+        if (
+            pageId === "adminPage" &&
+            currentRole === "admin"
+        ) {
+
+            requestAdminNotificationPermission();
+
             renderAdmin();
+
         }
 
     });
@@ -547,7 +910,7 @@ navButtons.forEach(button => {
 
 
 // ==========================================
-// 15. SUBMIT COMPLAINT TO FIRESTORE
+// 19. SUBMIT COMPLAINT TO FIRESTORE
 // ==========================================
 
 const complaintForm = document.getElementById("complaintForm");
@@ -557,27 +920,39 @@ complaintForm.addEventListener("submit", async function(event) {
     event.preventDefault();
 
     if (!currentUser || currentRole !== "student") {
-        showMessage("Please login with a student account.", "error");
+
+        showMessage(
+            "Please login with a student account.",
+            "error"
+        );
+
         return;
+
     }
 
     const newComplaint = {
 
         id: "CC-" + Date.now().toString().slice(-8),
 
-        studentName: document.getElementById("studentName").value.trim(),
+        studentName:
+            document.getElementById("studentName").value.trim(),
 
-        studentId: document.getElementById("studentId").value.trim(),
+        studentId:
+            document.getElementById("studentId").value.trim(),
 
         email: currentUser.email || "",
 
-        category: document.getElementById("category").value,
+        category:
+            document.getElementById("category").value,
 
-        location: document.getElementById("location").value.trim(),
+        location:
+            document.getElementById("location").value.trim(),
 
-        title: document.getElementById("complaintTitle").value.trim(),
+        title:
+            document.getElementById("complaintTitle").value.trim(),
 
-        description: document.getElementById("description").value.trim(),
+        description:
+            document.getElementById("description").value.trim(),
 
         status: "Pending",
 
@@ -601,7 +976,11 @@ complaintForm.addEventListener("submit", async function(event) {
         !newComplaint.description
     ) {
 
-        showMessage("Please fill in all required fields.", "error");
+        showMessage(
+            "Please fill in all required fields.",
+            "error"
+        );
+
         return;
 
     }
@@ -613,8 +992,11 @@ complaintForm.addEventListener("submit", async function(event) {
         const validationError = validateImage(selectedImage);
 
         if (validationError) {
+
             showMessage(validationError, "error");
+
             return;
+
         }
 
     }
@@ -625,27 +1007,60 @@ complaintForm.addEventListener("submit", async function(event) {
 
     try {
 
-        if (submitButton) submitButton.disabled = true;
+        if (submitButton) {
+            submitButton.disabled = true;
+        }
 
         if (selectedImage) {
 
-            showMessage("Uploading complaint image...", "success");
+            showMessage(
+                "Uploading complaint image...",
+                "success"
+            );
 
             const uploadedImage = await uploadImageToCloudinary(
                 selectedImage
             );
 
             newComplaint.imageUrl = uploadedImage.imageUrl;
-            newComplaint.imagePublicId = uploadedImage.imagePublicId;
+
+            newComplaint.imagePublicId =
+                uploadedImage.imagePublicId;
 
         }
 
-        showMessage("Submitting your complaint...", "success");
+        showMessage(
+            "Submitting your complaint...",
+            "success"
+        );
 
+        // Save complaint in Firestore first
         await addDoc(
             collection(db, "complaints"),
             newComplaint
         );
+
+        // Send email notification to admin
+        let emailNotificationSent = false;
+
+        try {
+
+            await sendAdminEmailNotification(newComplaint);
+
+            emailNotificationSent = true;
+
+            console.log(
+                "Admin email notification sent successfully!"
+            );
+
+        } catch (emailError) {
+
+            console.error(
+                "Admin email notification failed:",
+                emailError
+            );
+
+        }
 
         complaintForm.reset();
 
@@ -653,33 +1068,52 @@ complaintForm.addEventListener("submit", async function(event) {
             currentUser.email || "";
 
         if (imagePreview) {
+
             imagePreview.hidden = true;
             imagePreview.removeAttribute("src");
+
         }
 
         if (previewObjectURL) {
+
             URL.revokeObjectURL(previewObjectURL);
             previewObjectURL = null;
+
         }
 
         showMessage(
-            "Complaint submitted successfully! Your Complaint ID is: " +
-            newComplaint.id,
+
+            emailNotificationSent
+
+                ? "Complaint submitted successfully! Admin has been notified by email. Complaint ID: " +
+                  newComplaint.id
+
+                : "Complaint submitted successfully! Complaint ID: " +
+                  newComplaint.id +
+                  ". Email notification could not be sent.",
+
             "success"
+
         );
 
     } catch (error) {
 
-        console.error("Complaint submission error:", error);
+        console.error(
+            "Complaint submission error:",
+            error
+        );
 
         showMessage(
-            error.message || "Unable to submit complaint. Please try again.",
+            error.message ||
+            "Unable to submit complaint. Please try again.",
             "error"
         );
 
     } finally {
 
-        if (submitButton) submitButton.disabled = false;
+        if (submitButton) {
+            submitButton.disabled = false;
+        }
 
     }
 
@@ -687,7 +1121,7 @@ complaintForm.addEventListener("submit", async function(event) {
 
 
 // ==========================================
-// 16. TRACK COMPLAINT FROM FIRESTORE
+// 20. TRACK COMPLAINT FROM FIRESTORE
 // ==========================================
 
 const trackForm = document.getElementById("trackForm");
@@ -704,8 +1138,11 @@ trackForm.addEventListener("submit", async function(event) {
     const result = document.getElementById("trackResult");
 
     if (!enteredId) {
+
         result.textContent = "Please enter your Complaint ID.";
+
         return;
+
     }
 
     try {
@@ -713,9 +1150,13 @@ trackForm.addEventListener("submit", async function(event) {
         result.textContent = "Searching complaint...";
 
         const complaintQuery = query(
+
             collection(db, "complaints"),
+
             where("uid", "==", currentUser.uid),
+
             where("id", "==", enteredId)
+
         );
 
         const snapshot = await getDocs(complaintQuery);
@@ -724,7 +1165,9 @@ trackForm.addEventListener("submit", async function(event) {
 
             result.innerHTML = `
                 <div class="track-result">
-                    <strong style="color:#c44747">Complaint not found.</strong>
+                    <strong style="color:#c44747">
+                        Complaint not found.
+                    </strong>
                     <p>Please check your Complaint ID.</p>
                 </div>
             `;
@@ -735,44 +1178,52 @@ trackForm.addEventListener("submit", async function(event) {
 
         const complaint = snapshot.docs[0].data();
 
-       result.innerHTML = `
-    <div class="track-result">
+        result.innerHTML = `
 
-        <strong>${escapeHTML(complaint.id)}</strong>
+            <div class="track-result">
 
-        <p>${escapeHTML(complaint.title)}</p>
+                <strong>${escapeHTML(complaint.id)}</strong>
 
-        <p>Status:
-            <span class="status-badge ${getStatusClass(complaint.status)}">
-                ${escapeHTML(complaint.status)}
-            </span>
-        </p>
+                <p>${escapeHTML(complaint.title)}</p>
 
-        <p>Category: ${escapeHTML(complaint.category)}</p>
+                <p>Status:
 
-        <p>Submitted: ${escapeHTML(complaint.date)}</p>
+                    <span class="status-badge ${getStatusClass(complaint.status)}">
+                        ${escapeHTML(complaint.status)}
+                    </span>
 
-        <div class="admin-response"
-            style="margin-top:15px; padding:12px; border-radius:8px; background:#f1f5f9;">
+                </p>
 
-            <strong>Admin Response</strong>
+                <p>Category: ${escapeHTML(complaint.category)}</p>
 
-            <p>
-                ${complaint.adminReply
-                    ? escapeHTML(complaint.adminReply)
-                    : "No response from admin yet."}
-            </p>
+                <p>Submitted: ${escapeHTML(complaint.date)}</p>
 
-        </div>
+                <div class="admin-response"
+                    style="margin-top:15px; padding:12px; border-radius:8px; background:#f1f5f9;">
 
-    </div>
-`;
+                    <strong>Admin Response</strong>
+
+                    <p>
+                        ${complaint.adminReply
+                            ? escapeHTML(complaint.adminReply)
+                            : "No response from admin yet."}
+                    </p>
+
+                </div>
+
+            </div>
+
+        `;
 
     } catch (error) {
 
-        console.error("Tracking error:", error);
+        console.error(
+            "Tracking error:",
+            error
+        );
 
-        result.textContent = "Unable to track complaint. Please try again.";
+        result.textContent =
+            "Unable to track complaint. Please try again.";
 
     }
 
@@ -780,7 +1231,7 @@ trackForm.addEventListener("submit", async function(event) {
 
 
 // ==========================================
-// 17. ADMIN DASHBOARD ELEMENTS
+// 21. ADMIN DASHBOARD ELEMENTS
 // ==========================================
 
 const complaintsList = document.getElementById("complaintsList");
@@ -793,14 +1244,18 @@ const complaintSearch = document.getElementById("complaintSearch");
 
 
 // ==========================================
-// 18. STATUS CLASS
+// 22. STATUS CLASS
 // ==========================================
 
 function getStatusClass(status) {
 
-    if (status === "Resolved") return "status-resolved";
+    if (status === "Resolved") {
+        return "status-resolved";
+    }
 
-    if (status === "In Progress") return "status-in-progress";
+    if (status === "In Progress") {
+        return "status-in-progress";
+    }
 
     return "status-pending";
 
@@ -808,7 +1263,7 @@ function getStatusClass(status) {
 
 
 // ==========================================
-// 19. REAL-TIME FIRESTORE LISTENER
+// 23. REAL-TIME FIRESTORE LISTENER
 // ==========================================
 
 function startAdminListener() {
@@ -818,9 +1273,31 @@ function startAdminListener() {
     if (unsubscribeComplaints) return;
 
     unsubscribeComplaints = onSnapshot(
+
         collection(db, "complaints"),
 
         function(snapshot) {
+
+            // Ignore existing complaints in first snapshot.
+            // Notify only about newly added complaints.
+
+            if (adminNotificationsInitialized) {
+
+                snapshot.docChanges().forEach(change => {
+
+                    if (change.type === "added") {
+
+                        const complaint = change.doc.data();
+
+                        showAdminBrowserNotification(complaint);
+
+                    }
+
+                });
+
+            }
+
+            adminNotificationsInitialized = true;
 
             allComplaints = snapshot.docs.map(document => ({
 
@@ -830,7 +1307,10 @@ function startAdminListener() {
 
             }));
 
-            console.log("Complaints loaded:", allComplaints.length);
+            console.log(
+                "Complaints loaded:",
+                allComplaints.length
+            );
 
             renderAdmin();
 
@@ -838,23 +1318,32 @@ function startAdminListener() {
 
         function(error) {
 
-            console.error("Admin complaints loading error:", error);
+            console.error(
+                "Admin complaints loading error:",
+                error
+            );
 
             complaintsList.innerHTML = `
+
                 <div class="empty-state">
+
                     <h3>Unable to load complaints</h3>
+
                     <p>Please check your Firestore permissions.</p>
+
                 </div>
+
             `;
 
         }
+
     );
 
 }
 
 
 // ==========================================
-// 20. RENDER ADMIN DASHBOARD
+// 24. RENDER ADMIN DASHBOARD
 // ==========================================
 
 function renderAdmin() {
@@ -913,7 +1402,8 @@ function renderAdmin() {
 
         ].join(" ").toLowerCase();
 
-        const matchesSearch = searchableText.includes(search);
+        const matchesSearch =
+            searchableText.includes(search);
 
         return matchesStatus && matchesCategory && matchesSearch;
 
@@ -923,11 +1413,17 @@ function renderAdmin() {
     if (filteredComplaints.length === 0) {
 
         complaintsList.innerHTML = `
+
             <div class="empty-state">
+
                 <span>▤</span>
+
                 <h3>No complaints found</h3>
+
                 <p>There are no complaints in this category.</p>
+
             </div>
+
         `;
 
         return;
@@ -942,41 +1438,58 @@ function renderAdmin() {
             <div class="complaint-top">
 
                 <div>
+
                     <h4>${escapeHTML(complaint.title)}</h4>
 
                     <div class="complaint-meta">
+
                         ${escapeHTML(complaint.id)} •
                         ${escapeHTML(complaint.date)}
+
                     </div>
+
                 </div>
 
                 <span class="status-badge ${getStatusClass(complaint.status)}">
+
                     ${escapeHTML(complaint.status)}
+
                 </span>
 
             </div>
 
+
             <div class="complaint-description">
 
-                <strong>Student:</strong> ${escapeHTML(complaint.studentName)}<br>
+                <strong>Student:</strong>
+                ${escapeHTML(complaint.studentName)}<br>
 
-                <strong>Roll No:</strong> ${escapeHTML(complaint.studentId)}<br>
+                <strong>Roll No:</strong>
+                ${escapeHTML(complaint.studentId)}<br>
 
-                <strong>Email:</strong> ${escapeHTML(complaint.email)}<br>
+                <strong>Email:</strong>
+                ${escapeHTML(complaint.email)}<br>
 
-                <strong>Category:</strong> ${escapeHTML(complaint.category)}<br>
+                <strong>Category:</strong>
+                ${escapeHTML(complaint.category)}<br>
 
-                <strong>Location:</strong> ${escapeHTML(complaint.location)}<br><br>
+                <strong>Location:</strong>
+                ${escapeHTML(complaint.location)}<br><br>
 
                 ${escapeHTML(complaint.description)}
 
             </div>
 
+
             ${
                 complaint.imageUrl &&
                 /^https:\/\/res\.cloudinary\.com\/ykncmcs8\/image\/upload\//.test(complaint.imageUrl)
+
                 ? `
-                    <div class="complaint-evidence" style="margin-top:15px;">
+
+                    <div class="complaint-evidence"
+                        style="margin-top:15px;">
+
                         <strong>Attached Evidence:</strong><br>
 
                         <a
@@ -984,68 +1497,87 @@ function renderAdmin() {
                             target="_blank"
                             rel="noopener noreferrer"
                         >
+
                             <img
                                 src="${escapeHTML(complaint.imageUrl)}"
                                 alt="Complaint evidence"
                                 loading="lazy"
                                 style="max-width:220px; max-height:180px; object-fit:cover; border-radius:10px; margin-top:10px; display:block;"
                             >
+
                         </a>
+
                     </div>
+
                 `
+
                 : ""
+
             }
 
-           <div class="complaint-actions">
 
-    <select class="status-select"
-        data-firestore-id="${escapeHTML(complaint.firestoreId)}">
+            <div class="complaint-actions">
 
-        <option value="Pending" ${complaint.status === "Pending" ? "selected" : ""}>
-            Pending
-        </option>
+                <select
+                    class="status-select"
+                    data-firestore-id="${escapeHTML(complaint.firestoreId)}"
+                >
 
-        <option value="In Progress" ${complaint.status === "In Progress" ? "selected" : ""}>
-            In Progress
-        </option>
+                    <option value="Pending" ${complaint.status === "Pending" ? "selected" : ""}>
+                        Pending
+                    </option>
 
-        <option value="Resolved" ${complaint.status === "Resolved" ? "selected" : ""}>
-            Resolved
-        </option>
+                    <option value="In Progress" ${complaint.status === "In Progress" ? "selected" : ""}>
+                        In Progress
+                    </option>
 
-    </select>
+                    <option value="Resolved" ${complaint.status === "Resolved" ? "selected" : ""}>
+                        Resolved
+                    </option>
 
-    <button class="delete-btn"
-        data-delete="${escapeHTML(complaint.firestoreId)}">
-        Delete Complaint
-    </button>
+                </select>
 
-</div>
 
-<div class="admin-reply-box" style="margin-top:15px;">
+                <button
+                    class="delete-btn"
+                    data-delete="${escapeHTML(complaint.firestoreId)}"
+                >
 
-    <label>Admin Response</label>
+                    Delete Complaint
 
-    <textarea
-        class="admin-reply-input"
-        data-reply-id="${escapeHTML(complaint.firestoreId)}"
-        placeholder="Write your response to the student..."
-        maxlength="2000"
-        rows="3"
-        style="width:100%; padding:12px; margin-top:8px;"
-    >${escapeHTML(complaint.adminReply || "")}</textarea>
+                </button>
 
-    <button
-        class="reply-btn"
-        data-reply="${escapeHTML(complaint.firestoreId)}"
-        style="margin-top:10px;"
-    >
-        Save Response
-    </button>
+            </div>
 
-</div>
 
-</div>
+            <div class="admin-reply-box"
+                style="margin-top:15px;">
+
+                <label>Admin Response</label>
+
+                <textarea
+                    class="admin-reply-input"
+                    data-reply-id="${escapeHTML(complaint.firestoreId)}"
+                    placeholder="Write your response to the student..."
+                    maxlength="2000"
+                    rows="3"
+                    style="width:100%; padding:12px; margin-top:8px;"
+                >${escapeHTML(complaint.adminReply || "")}</textarea>
+
+
+                <button
+                    class="reply-btn"
+                    data-reply="${escapeHTML(complaint.firestoreId)}"
+                    style="margin-top:10px;"
+                >
+
+                    Save Response
+
+                </button>
+
+            </div>
+
+        </div>
 
     `).join("");
 
@@ -1053,7 +1585,7 @@ function renderAdmin() {
 
 
 // ==========================================
-// 21. SEARCH AND FILTERS
+// 25. SEARCH AND FILTERS
 // ==========================================
 
 statusFilter.addEventListener("change", renderAdmin);
@@ -1064,7 +1596,7 @@ complaintSearch.addEventListener("input", renderAdmin);
 
 
 // ==========================================
-// 22. UPDATE COMPLAINT STATUS IN FIRESTORE
+// 26. UPDATE COMPLAINT STATUS IN FIRESTORE
 // ==========================================
 
 complaintsList.addEventListener("change", async function(event) {
@@ -1079,9 +1611,11 @@ complaintsList.addEventListener("change", async function(event) {
     const newStatus = event.target.value;
 
     const allowedStatuses = [
+
         "Pending",
         "In Progress",
         "Resolved"
+
     ];
 
     if (!allowedStatuses.includes(newStatus)) return;
@@ -1089,17 +1623,23 @@ complaintsList.addEventListener("change", async function(event) {
     try {
 
         await updateDoc(
+
             doc(db, "complaints", firestoreId),
+
             {
                 status: newStatus
             }
+
         );
 
         console.log("Complaint status updated!");
 
     } catch (error) {
 
-        console.error("Status update error:", error);
+        console.error(
+            "Status update error:",
+            error
+        );
 
         alert("Unable to update complaint status.");
 
@@ -1109,7 +1649,7 @@ complaintsList.addEventListener("change", async function(event) {
 
 
 // ==========================================
-// 23. DELETE COMPLAINT FROM FIRESTORE
+// 27. DELETE COMPLAINT FROM FIRESTORE
 // ==========================================
 
 complaintsList.addEventListener("click", async function(event) {
@@ -1123,7 +1663,9 @@ complaintsList.addEventListener("click", async function(event) {
     const firestoreId = button.dataset.delete;
 
     if (!confirm("Are you sure you want to delete this complaint?")) {
+
         return;
+
     }
 
     try {
@@ -1138,7 +1680,10 @@ complaintsList.addEventListener("click", async function(event) {
 
     } catch (error) {
 
-        console.error("Delete complaint error:", error);
+        console.error(
+            "Delete complaint error:",
+            error
+        );
 
         alert("Unable to delete complaint.");
 
@@ -1148,8 +1693,9 @@ complaintsList.addEventListener("click", async function(event) {
 
 });
 
+
 // ==========================================
-// 24. SAVE ADMIN RESPONSE TO FIRESTORE
+// 28. SAVE ADMIN RESPONSE + EMAIL STUDENT
 // ==========================================
 
 complaintsList.addEventListener("click", async function(event) {
@@ -1171,31 +1717,102 @@ complaintsList.addEventListener("click", async function(event) {
     const adminReply = textarea.value.trim();
 
     if (!adminReply) {
+
         alert("Please write a response first.");
+
         return;
+
     }
+
+    const complaint = allComplaints.find(
+        item => item.firestoreId === firestoreId
+    );
+
+    if (!complaint) {
+
+        alert("Complaint not found. Please refresh the page.");
+
+        return;
+
+    }
+
+    const replyChanged =
+        adminReply !== (complaint.adminReply || "");
 
     try {
 
         button.disabled = true;
+
         button.textContent = "Saving...";
 
+        // Save reply in Firestore first
         await updateDoc(
+
             doc(db, "complaints", firestoreId),
+
             {
                 adminReply: adminReply
             }
+
         );
+
+        console.log(
+            "Admin response saved successfully!"
+        );
+
+        // Send email only for a new or changed reply
+        if (replyChanged) {
+
+            button.textContent = "Sending Email...";
+
+            try {
+
+                await sendStudentReplyEmail(
+                    complaint,
+                    adminReply
+                );
+
+                console.log(
+                    "Student reply email sent successfully!"
+                );
+
+                alert(
+                    "Admin response saved and email sent to the student!"
+                );
+
+            } catch (emailError) {
+
+                console.error(
+                    "Student reply email failed:",
+                    emailError
+                );
+
+                alert(
+                    "Response saved successfully, but student email could not be sent. Check the Console."
+                );
+
+            }
+
+        } else {
+
+            alert(
+                "Response saved. No email sent because the reply was unchanged."
+            );
+
+        }
 
         button.textContent = "Saved";
 
-        console.log("Admin response saved successfully!");
-
     } catch (error) {
 
-        console.error("Admin response error:", error);
+        console.error(
+            "Admin response error:",
+            error
+        );
 
-        alert("Unable to save response. Please try again.");
+        alert(
+            "Unable to save response. Please try again."
+        );
 
         button.textContent = "Save Response";
 
@@ -1207,8 +1824,9 @@ complaintsList.addEventListener("click", async function(event) {
 
 });
 
+
 // ==========================================
-// 25. INITIALIZATION
+// 29. INITIALIZATION
 // ==========================================
 
 console.log("CampusCare Application Loaded!");
